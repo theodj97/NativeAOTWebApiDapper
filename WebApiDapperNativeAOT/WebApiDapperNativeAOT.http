@@ -1,0 +1,11 @@
+@WebApiDapperNativeAOT_HostAddress = http://localhost:5170
+
+GET {{WebApiDapperNativeAOT_HostAddress}}/todos/
+Accept: application/json
+
+###
+
+GET {{WebApiDapperNativeAOT_HostAddress}}/todos/1
+Accept: application/json
+
+###
