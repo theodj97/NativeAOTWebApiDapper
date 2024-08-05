@@ -1,8 +1,3 @@
-﻿using System.Text.Json.Serialization;
+﻿namespace WebApiDapperNativeAOT.Models;
 
-namespace WebApiDapperNativeAOT.Models;
-
-public record Todo(int Id, string? Title, DateTime? DueBy = null, bool IsComplete = false);
-
-[JsonSerializable(typeof(Todo[]))]
-internal partial class AppJsonSerializerContext : JsonSerializerContext { }
+public record Todo(int Id, string Title, string? Description, int CreatedBy, string? AssignedTo = null, DateTime? TargetDate = null, bool IsComplete = false);
