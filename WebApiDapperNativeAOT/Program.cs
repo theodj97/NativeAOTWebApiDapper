@@ -21,7 +21,14 @@ if (appSettings.ConnectionStrings is null || appSettings.ConnectionStrings.TodoD
 
 ToDoHandler handler = new(appSettings);
 var todosApi = app.MapGroup("/todos");
-//todosApi.MapGet("/", () => sampleTodos);
+todosApi.MapGet("/", (string[]? title, string[]? description, int? createdBy, int[]? assignedTo, bool? isComplete) =>
+{
+    var todos = handler.Search(title, description, createdBy, assignedTo, isComplete);
+    if (todos.Length > 0)
+        return Results.Ok(todos);
+    return Results.NoContent();
+});
+
 todosApi.MapGet("/{id}", (int id) => handler.GetTodoById(id) is { } todo
         ? Results.Ok(todo)
         : Results.NotFound());
