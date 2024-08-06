@@ -19,7 +19,7 @@ builder.Configuration.Bind(appSettings);
 if (appSettings.ConnectionStrings is null || appSettings.ConnectionStrings.TodoDB.IsNullOrEmpty())
     throw new Exception("Error reading appsettings file.");
 
-ToDoHandler handler = new(appSettings);
+ToDoHandler handler = new(appSettings.ConnectionStrings.TodoDB);
 var todosApi = app.MapGroup("/todos");
 todosApi.MapGet("/", (string[]? title, string[]? description, int? createdBy, int[]? assignedTo, bool? isComplete) =>
 {
@@ -29,9 +29,15 @@ todosApi.MapGet("/", (string[]? title, string[]? description, int? createdBy, in
     return Results.NoContent();
 });
 
-todosApi.MapGet("/{id}", (int id) => handler.GetTodoById(id) is { } todo
+todosApi.MapGet("/{id}", (int id) => handler.GetById(id) is { } todo
         ? Results.Ok(todo)
         : Results.NotFound());
+
+todosApi.MapPost("/", (Todo todo) =>
+{
+    handler.Create(todo);
+    return Results.Created();
+});
 
 app.Run();
 public partial class Program { }

@@ -2,18 +2,17 @@
 using Microsoft.Data.SqlClient;
 using System.Text;
 using WebApiDapperNativeAOT.Models;
-using WebApiDapperNativeAOT.Models.Configuration;
 
 namespace WebApiDapperNativeAOT.Handlers;
 
-public class ToDoHandler(AppSettings appSettings)
+public class ToDoHandler(string connectionString)
 {
-    private readonly AppSettings appSettings = appSettings;
+    private readonly string connectionString = connectionString;
 
     [DapperAot]
     public Todo[] Search(string[]? title = null, string[]? description = null, int? createdBy = null, int[]? assignedTo = null, bool? isComplete = null)
     {
-        using var connection = new SqlConnection(appSettings.ConnectionStrings.TodoDB);
+        using var connection = new SqlConnection(connectionString);
         connection.Open();
         var query = new StringBuilder("SELECT Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete FROM dbo.Todos");
 
@@ -43,11 +42,20 @@ public class ToDoHandler(AppSettings appSettings)
     }
 
     [DapperAot]
-    public Todo GetTodoById(int todoId)
+    public Todo GetById(int todoId)
     {
-        using var connection = new SqlConnection(appSettings.ConnectionStrings.TodoDB);
+        using var connection = new SqlConnection(connectionString);
         connection.Open();
         var response = connection.QueryFirst<Todo>("select Id, Title, Description, CreatedBy, AssignedTo,TargetDate, IsComplete from dbo.Todos where Id=@todoId", new { todoId });
         return response;
+    }
+
+    [DapperAot]
+    public void Create(Todo todo)
+    {
+        using var connection = new SqlConnection(connectionString);
+        connection.Open();
+        var query = "INSERT INTO dbo.Todos (Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete) VALUES (@Title, @Description, @CreatedBy, @AssignedTo, @TargetDate, @IsComplete)";
+        connection.Execute(query, todo);
     }
 }
