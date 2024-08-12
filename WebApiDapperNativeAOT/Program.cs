@@ -1,8 +1,10 @@
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
 using WebApiDapperNativeAOT.Handlers;
-using WebApiDapperNativeAOT.Models;
 using WebApiDapperNativeAOT.Models.Configuration;
+using WebApiDapperNativeAOT.Models.Requests.Todo;
+using WebApiDapperNativeAOT.Models.Responses;
+using WebApiDapperNativeAOT.Routes;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
@@ -11,36 +13,23 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
 });
 
-var app = builder.Build();
-
 var appSettings = new AppSettings();
 builder.Configuration.Bind(appSettings);
 
 if (appSettings.ConnectionStrings is null || appSettings.ConnectionStrings.TodoDB.IsNullOrEmpty())
     throw new Exception("Error reading appsettings file.");
 
-ToDoHandler handler = new(appSettings.ConnectionStrings.TodoDB);
-var todosApi = app.MapGroup("/todos");
-todosApi.MapGet("/", (string[]? title, string[]? description, int? createdBy, int[]? assignedTo, bool? isComplete) =>
-{
-    var todos = handler.Search(title, description, createdBy, assignedTo, isComplete);
-    if (todos.Length > 0)
-        return Results.Ok(todos);
-    return Results.NoContent();
-});
+builder.Services.AddSingleton(appSettings);
+builder.Services.AddTransient<TodoHandler>();
 
-todosApi.MapGet("/{id}", (int id) => handler.GetById(id) is { } todo
-        ? Results.Ok(todo)
-        : Results.NotFound());
+var app = builder.Build();
 
-todosApi.MapPost("/", (Todo todo) =>
-{
-    handler.Create(todo);
-    return Results.Created();
-});
+app.MapRoutes();
 
 app.Run();
 public partial class Program { }
 
-[JsonSerializable(typeof(Todo[]))]
+[JsonSerializable(typeof(TodoCreateRequest))]
+[JsonSerializable(typeof(TodoUpdateRequest))]
+[JsonSerializable(typeof(IEnumerable<TodoResponse>))]
 internal partial class AppJsonSerializerContext : JsonSerializerContext { }

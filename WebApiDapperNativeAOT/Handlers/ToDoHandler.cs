@@ -1,19 +1,23 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Text;
+using WebApiDapperNativeAOT.Handlers.Mappers;
 using WebApiDapperNativeAOT.Models;
+using WebApiDapperNativeAOT.Models.Configuration;
+using WebApiDapperNativeAOT.Models.Requests.Todo;
+using WebApiDapperNativeAOT.Models.Responses;
 
 namespace WebApiDapperNativeAOT.Handlers;
 
-public class ToDoHandler(string connectionString)
+public class TodoHandler(AppSettings appSettings)
 {
-    private readonly string connectionString = connectionString;
+    private readonly string connectionString = appSettings.ConnectionStrings.TodoDB;
 
     [DapperAot]
-    public Todo[] Search(string[]? title = null, string[]? description = null, int? createdBy = null, int[]? assignedTo = null, bool? isComplete = null)
+    public async Task<IEnumerable<TodoResponse>> SearchAsync(string[]? title = null, string[]? description = null, int? createdBy = null, int[]? assignedTo = null, bool? isComplete = null)
     {
         using var connection = new SqlConnection(connectionString);
-        connection.Open();
+        await connection.OpenAsync();
         var query = new StringBuilder("SELECT Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete FROM dbo.Todos");
 
         List<string> conditions = [];
@@ -37,25 +41,58 @@ public class ToDoHandler(string connectionString)
             query.Append(" WHERE ").Append(string.Join(" AND ", conditions));
 
         var parameters = new { createdBy, isComplete };
-        var response = connection.Query<Todo>(query.ToString(), parameters);
-        return response.ToArray();
+        var response = await connection.QueryAsync<TodoEntity>(query.ToString(), parameters);
+        return TodoMapper.FromEntityToResponse(response);
     }
 
     [DapperAot]
-    public Todo GetById(int todoId)
+    public async Task<TodoResponse> GetByIdAsync(int todoId)
     {
         using var connection = new SqlConnection(connectionString);
-        connection.Open();
-        var response = connection.QueryFirst<Todo>("select Id, Title, Description, CreatedBy, AssignedTo,TargetDate, IsComplete from dbo.Todos where Id=@todoId", new { todoId });
-        return response;
+        await connection.OpenAsync();
+        var response = await connection.QueryFirstAsync<TodoEntity>("select Id, Title, Description, CreatedBy, AssignedTo,TargetDate, IsComplete from dbo.Todos where Id=@todoId", new { todoId });
+        return TodoMapper.FromEntityToResponse(response);
     }
 
     [DapperAot]
-    public void Create(Todo todo)
+    public async Task<TodoResponse> CreateAsync(TodoCreateRequest request)
     {
         using var connection = new SqlConnection(connectionString);
-        connection.Open();
-        var query = "INSERT INTO dbo.Todos (Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete) VALUES (@Title, @Description, @CreatedBy, @AssignedTo, @TargetDate, @IsComplete)";
-        connection.Execute(query, todo);
+        await connection.OpenAsync();
+        var query = @"INSERT INTO dbo.Todos (Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete) 
+        VALUES (@Title, @Description, @CreatedBy, @AssignedTo, @TargetDate, @IsComplete);
+        SELECT CAST(SCOPE_IDENTITY() as int);";
+
+        var newId = await connection.QuerySingleAsync<int>(query, request);
+        return TodoMapper.FromCreateRequestToResponse(request, newId);
+    }
+
+    [DapperAot]
+    public async Task<bool> UpdateAsync(int id, TodoUpdateRequest request)
+    {
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+        var query = "UPDATE dbo.Todos SET Title = @Title, Description = @Description, CreatedBy = @CreatedBy, AssignedTo = @AssignedTo, TargetDate = @TargetDate, IsComplete = @IsComplete WHERE Id = @Id";
+        var parameters = new
+        {
+            request.Title,
+            request.Description,
+            request.CreatedBy,
+            request.AssignedTo,
+            request.TargetDate,
+            request.IsComplete,
+            Id = id
+        };
+        var result = await connection.ExecuteAsync(query, parameters);
+        return result > 0;
+    }
+
+    [DapperAot]
+    public async Task DeleteAsync(int todoId)
+    {
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+        var query = "DELETE FROM dbo.Todos WHERE Id = @todoId";
+        await connection.ExecuteAsync(query, new { todoId });
     }
 }
