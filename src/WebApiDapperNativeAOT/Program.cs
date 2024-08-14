@@ -18,6 +18,8 @@ builder.Services.AddTransient<TodoHandler>();
 
 var app = builder.Build();
 
+app.Urls.Add("http://localhost:5170");
+
 app.MapRoutes();
 
 app.Run();

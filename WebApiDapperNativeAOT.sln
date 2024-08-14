@@ -9,11 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FB11F307-E09
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CF9B918C-FC31-46F9-ACC7-FCE765314A79}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "K6", "K6", "{97719358-54E4-4E1A-B38A-7073D1B91FA4}"
-	ProjectSection(SolutionItems) = preProject
-		PerformanceTests.js = PerformanceTests.js
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,7 +25,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BA43809F-4151-4098-8553-1B7907950706} = {FB11F307-E098-4503-BDD0-8C06645142D4}
-		{97719358-54E4-4E1A-B38A-7073D1B91FA4} = {CF9B918C-FC31-46F9-ACC7-FCE765314A79}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5B3DDD51-8636-4D47-B670-8AD4CB0739C3}
