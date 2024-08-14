@@ -1,6 +1,6 @@
-﻿using WebApiDapperNativeAOT.Models.Responses;
-using WebApiDapperNativeAOT.Models;
+﻿using WebApiDapperNativeAOT.Models.Entities;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
+using WebApiDapperNativeAOT.Models.Responses;
 
 namespace WebApiDapperNativeAOT.Handlers.Mappers;
 

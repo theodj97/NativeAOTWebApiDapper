@@ -1,0 +1,44 @@
+@WebApiDapperNativeAOT_HostAddress = http://localhost:5170
+
+GET {{WebApiDapperNativeAOT_HostAddress}}/todos/
+Accept: application/json
+
+###
+
+GET {{WebApiDapperNativeAOT_HostAddress}}/todos/1
+Accept: application/json
+
+###
+
+POST {{WebApiDapperNativeAOT_HostAddress}}/todos/
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Sample Title",
+  "description": "Sample Description",
+  "createdBy": 1,
+  "assignedTo": [2, 3],
+  "targetDate": "2023-12-31T00:00:00Z",
+  "isComplete": false
+}
+
+###
+
+PUT {{WebApiDapperNativeAOT_HostAddress}}/todos/1
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Updated Title",
+  "description": "Updated Description",
+  "createdBy": 1,
+  "assignedTo": [2, 3],
+  "targetDate": "2023-12-31T00:00:00Z",
+  "isComplete": true
+}
+
+###
+
+DELETE {{WebApiDapperNativeAOT_HostAddress}}/todos/1
+Accept: application/json

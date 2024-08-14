@@ -2,16 +2,15 @@
 using Microsoft.Data.SqlClient;
 using System.Text;
 using WebApiDapperNativeAOT.Handlers.Mappers;
-using WebApiDapperNativeAOT.Models;
-using WebApiDapperNativeAOT.Models.Configuration;
+using WebApiDapperNativeAOT.Models.Entities;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
 
 namespace WebApiDapperNativeAOT.Handlers;
 
-public class TodoHandler(AppSettings appSettings)
+public class TodoHandler(string connectionString)
 {
-    private readonly string connectionString = appSettings.ConnectionStrings.TodoDB;
+    private readonly string connectionString = connectionString;
 
     [DapperAot]
     public async Task<IEnumerable<TodoResponse>> SearchAsync(string[]? title = null, string[]? description = null, int? createdBy = null, int[]? assignedTo = null, bool? isComplete = null)

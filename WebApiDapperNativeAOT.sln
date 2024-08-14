@@ -3,7 +3,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35027.167
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiDapperNativeAOT", "WebApiDapperNativeAOT\WebApiDapperNativeAOT.csproj", "{BA43809F-4151-4098-8553-1B7907950706}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebApiDapperNativeAOT", "src\WebApiDapperNativeAOT\WebApiDapperNativeAOT.csproj", "{BA43809F-4151-4098-8553-1B7907950706}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FB11F307-E098-4503-BDD0-8C06645142D4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CF9B918C-FC31-46F9-ACC7-FCE765314A79}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "K6", "K6", "{97719358-54E4-4E1A-B38A-7073D1B91FA4}"
+	ProjectSection(SolutionItems) = preProject
+		PerformanceTests.js = PerformanceTests.js
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,6 +27,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BA43809F-4151-4098-8553-1B7907950706} = {FB11F307-E098-4503-BDD0-8C06645142D4}
+		{97719358-54E4-4E1A-B38A-7073D1B91FA4} = {CF9B918C-FC31-46F9-ACC7-FCE765314A79}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5B3DDD51-8636-4D47-B670-8AD4CB0739C3}
