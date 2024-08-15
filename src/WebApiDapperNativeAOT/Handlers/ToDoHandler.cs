@@ -41,7 +41,7 @@ public class TodoHandler(string connectionString)
             query.Append(" WHERE ").Append(string.Join(" AND ", conditions));
 
         var parameters = new { createdBy, isComplete };
-        var response = await connection.QueryAsync<TodoEntity>(new CommandDefinition(query.ToString(), parameters, cancellationToken: cancellationToken));
+        var response = await connection.QueryAsync<TodoEntity>(query.ToString(), parameters);
         return TodoMapper.FromEntityToResponse(response);
     }
 
@@ -50,7 +50,7 @@ public class TodoHandler(string connectionString)
     {
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
-        var response = await connection.QueryFirstAsync<TodoEntity>(new CommandDefinition("select Id, Title, Description, CreatedBy, AssignedTo,TargetDate, IsComplete from dbo.Todos where Id=@todoId", new { todoId }, cancellationToken: cancellationToken));
+        var response = await connection.QueryFirstAsync<TodoEntity>("select Id, Title, Description, CreatedBy, AssignedTo,TargetDate, IsComplete from dbo.Todos where Id=@todoId", new { todoId });
         return TodoMapper.FromEntityToResponse(response);
     }
 
@@ -76,7 +76,7 @@ public class TodoHandler(string connectionString)
                 SELECT CAST(SCOPE_IDENTITY() as int);
             END";
 
-            var newId = await connection.QuerySingleAsync<int>(new CommandDefinition(query, request, transaction, cancellationToken: cancellationToken));
+            var newId = await connection.QuerySingleAsync<int>(query, request, transaction);
             await transaction.CommitAsync(cancellationToken);
             return TodoMapper.FromCreateRequestToResponse(request, newId);
         }
@@ -119,7 +119,7 @@ public class TodoHandler(string connectionString)
                 Id = id
             };
 
-            var result = await connection.ExecuteAsync(new CommandDefinition(query, parameters, transaction, cancellationToken: cancellationToken));
+            var result = await connection.ExecuteAsync(query, parameters, transaction);
             await transaction.CommitAsync(cancellationToken);
             return result > 0;
         }
@@ -136,6 +136,6 @@ public class TodoHandler(string connectionString)
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
         var query = "DELETE FROM dbo.Todos WHERE Id = @todoId";
-        await connection.ExecuteAsync(new CommandDefinition(query, new { todoId }, cancellationToken: cancellationToken));
+        await connection.ExecuteAsync(query, new { todoId });
     }
 }
