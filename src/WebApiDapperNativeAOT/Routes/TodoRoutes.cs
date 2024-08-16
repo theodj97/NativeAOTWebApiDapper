@@ -36,5 +36,7 @@ public static class TodoRoutes
             var result = await handler.BulkInsertAsync(request, cancellationToken);
             return Results.Created(string.Empty, result);
         });
+
+        todosApi.MapPut("/bulkUpdate", async (TodoHandler handler, [FromBody] IEnumerable<TodoBulkUpdateRequest> request, CancellationToken cancellationToken = default) => await handler.BulkUpdateAsync(request, cancellationToken));
     }
 }
