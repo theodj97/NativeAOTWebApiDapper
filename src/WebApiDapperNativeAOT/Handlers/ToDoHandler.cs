@@ -138,4 +138,44 @@ public class TodoHandler(string connectionString)
         var query = "DELETE FROM dbo.Todos WHERE Id = @todoId";
         await connection.ExecuteAsync(query, new { todoId });
     }
+
+    [DapperAot]
+    public async Task<bool> BulkInsertAsync(IEnumerable<TodoCreateRequest> request, CancellationToken cancellationToken = default)
+    {
+        if (!request.Any())
+            return false;
+
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            var query = new StringBuilder();
+            query.Append("IF EXISTS (SELECT 1 FROM dbo.Todos WHERE Title IN (");
+            foreach (var todo in request)
+            {
+                query.Append($"'{todo.Title.Replace("'", "''")}',");
+            }
+            query.Length--; // Eliminar la última coma
+            query.Append(")) BEGIN THROW 50000, 'A Todo with the same title already exists.', 1; END ");
+
+            query.Append("INSERT INTO dbo.Todos (Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete) VALUES ");
+            foreach (var todo in request)
+            {
+                query.Append($"('{todo.Title.Replace("'", "''")}', {(todo.Description is not null ? $"'{todo.Description.Replace("'", "''")}'" : "NULL")}, {todo.CreatedBy}, {todo.AssignedTo}, '{todo.TargetDate:yyyy-MM-dd HH:mm:ss}', {(todo.IsComplete ? 1 : 0)}),");
+            }
+
+            query.Length--; // Eliminar la última coma
+
+            await connection.ExecuteAsync(query.ToString(), transaction: transaction);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw new ConflictException("An error occurred while inserting the todos.");
+        }
+    }
 }
