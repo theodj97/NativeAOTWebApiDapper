@@ -220,8 +220,6 @@ public class TodoHandler(string connectionString)
             ");
             }
 
-            var test = query.ToString();
-
             await connection.ExecuteAsync(query.ToString(), transaction: transaction);
             await transaction.CommitAsync(cancellationToken);
             return true;
