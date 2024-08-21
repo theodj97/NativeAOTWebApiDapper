@@ -4,8 +4,10 @@ using WebApiDapperNativeAOT.Models.Exceptions;
 
 namespace WebApiDapperNativeAOT.Handlers.ExceptionHandler;
 
-public sealed class GlobalExceptionHandler() : IExceptionHandler
+public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
+    private readonly ILogger<GlobalExceptionHandler> logger = logger;
+
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         if (exception is null)
@@ -58,10 +60,10 @@ public sealed class GlobalExceptionHandler() : IExceptionHandler
         };
 
         if (problemDetails.Status == StatusCodes.Status500InternalServerError)
-            Console.WriteLine($"Critical error: {exception.Message}");
+            logger.LogError("Error: {exception}", exception);
 
         httpContext.Response.StatusCode = problemDetails.Status!.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+        await httpContext.Response.WriteAsJsonAsync(problemDetails!, cancellationToken); // Esta advertencia no es importante ya que se ha añadido la clase ProblemDetails en AppJsonSerializerContext
 
         return true;
     }

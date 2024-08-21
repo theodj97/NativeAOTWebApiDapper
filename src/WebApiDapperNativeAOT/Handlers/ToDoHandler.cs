@@ -191,34 +191,52 @@ public class TodoHandler(string connectionString)
 
         try
         {
-            var ids = string.Join(",", request.Select(r => r.Id));
-            var titles = string.Join(",", request.Select(r => $"'{r.Title.Replace("'", "''")}'"));
-
             var query = new StringBuilder();
-            query.Append($@"
-            IF (SELECT COUNT(*) FROM dbo.Todos WHERE Id IN ({ids})) <> {request.Count()}
+            query.Append(@"
+            CREATE TABLE #TempTodos (
+                Id INT,
+                Title NVARCHAR(255) NOT NULL,
+                Description NVARCHAR(1000),
+                CreatedBy INT NOT NULL,
+                AssignedTo NVARCHAR(255),
+                TargetDate DATETIME,
+                IsComplete BIT NOT NULL
+            );
+            INSERT INTO #TempTodos (Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete)
+            VALUES ");
+
+            var values = new List<string>();
+            foreach (var todo in request)
+            {
+                var descriptionValue = todo.Description != null ? $"'{todo.Description.Replace("'", "''")}'" : "NULL";
+                var assignedToValue = todo.AssignedTo != null ? $"'{todo.AssignedTo.Replace("'", "''")}'" : "NULL";
+                var targetDateValue = todo.TargetDate.HasValue ? $"'{todo.TargetDate.Value:yyyy-MM-dd HH:mm:ss}'" : "NULL";
+                var value = $"({todo.Id}, '{todo.Title.Replace("'", "''")}', {descriptionValue}, {todo.CreatedBy}, {assignedToValue}, {targetDateValue}, {(todo.IsComplete ? 1 : 0)})";
+                values.Add(value);
+            }
+
+            query.Append(string.Join(", ", values));
+
+            query.Append(@";
+            IF (SELECT COUNT(*) FROM dbo.Todos WHERE Id IN (SELECT Id FROM #TempTodos)) <> ").Append(request.Count()).Append(@"
             BEGIN
                 THROW 50000, 'One or more Todo IDs do not exist.', 1;
             END
-            IF EXISTS (SELECT 1 FROM dbo.Todos WHERE Title IN ({titles}) AND Id NOT IN ({ids}))
+            IF EXISTS (SELECT 1 FROM dbo.Todos WHERE Title IN (SELECT Title FROM #TempTodos) AND Id NOT IN (SELECT Id FROM #TempTodos))
             BEGIN
                 THROW 50001, 'A Todo with the same title already exists.', 1;
             END
-            ");
 
-            foreach (var todo in request)
-            {
-                query.Append($@"
-                UPDATE dbo.Todos 
-                SET Title = '{todo.Title.Replace("'", "''")}', 
-                    Description = {(todo.Description is not null ? $"'{todo.Description.Replace("'", "''")}'" : "NULL")}, 
-                    CreatedBy = {todo.CreatedBy}, 
-                    AssignedTo = {todo.AssignedTo}, 
-                    TargetDate = '{todo.TargetDate:yyyy-MM-dd HH:mm:ss}', 
-                    IsComplete = {(todo.IsComplete ? 1 : 0)} 
-                WHERE Id = {todo.Id};
+            UPDATE t
+            SET t.Title = temp.Title,
+                t.Description = temp.Description,
+                t.CreatedBy = temp.CreatedBy,
+                t.AssignedTo = temp.AssignedTo,
+                t.TargetDate = temp.TargetDate,
+                t.IsComplete = temp.IsComplete
+            FROM dbo.Todos t
+            INNER JOIN #TempTodos temp ON t.Id = temp.Id;
             ");
-            }
 
             await connection.ExecuteAsync(query.ToString(), transaction: transaction);
             await transaction.CommitAsync(cancellationToken);
@@ -237,7 +255,11 @@ public class TodoHandler(string connectionString)
         catch
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new ConflictException("An error occurred while updating the todos.");
+            throw;
+        }
+        finally
+        {
+            await connection.ExecuteAsync("DROP TABLE IF EXISTS #TempTodos");
         }
     }
 }
