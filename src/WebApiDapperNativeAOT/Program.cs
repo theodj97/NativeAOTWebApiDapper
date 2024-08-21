@@ -16,6 +16,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 string connectionString = "Server=localhost,1433;Database=Todo;User Id=sa;Password=Your_password123;TrustServerCertificate=True";
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Information; });
+
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddSingleton(connectionString);
@@ -31,10 +34,8 @@ app.UseExceptionHandler(errorApp =>
         var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
         var exception = exceptionHandlerPathFeature?.Error;
 
-        if (exception != null)
-        {
+        if (exception is not null)
             await exceptionHandler.TryHandleAsync(context, exception, context.RequestAborted);
-        }
     });
 });
 
@@ -49,5 +50,6 @@ public partial class Program { }
 [JsonSerializable(typeof(TodoCreateRequest))]
 [JsonSerializable(typeof(IEnumerable<TodoCreateRequest>))]
 [JsonSerializable(typeof(TodoUpdateRequest))]
+[JsonSerializable(typeof(IEnumerable<TodoBulkUpdateRequest>))]
 [JsonSerializable(typeof(IEnumerable<TodoResponse>))]
 internal partial class AppJsonSerializerContext : JsonSerializerContext { }
