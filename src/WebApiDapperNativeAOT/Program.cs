@@ -52,4 +52,5 @@ public partial class Program { }
 [JsonSerializable(typeof(TodoUpdateRequest))]
 [JsonSerializable(typeof(IEnumerable<TodoBulkUpdateRequest>))]
 [JsonSerializable(typeof(IEnumerable<TodoResponse>))]
+[JsonSerializable(typeof(IEnumerable<int>))]
 internal partial class AppJsonSerializerContext : JsonSerializerContext { }

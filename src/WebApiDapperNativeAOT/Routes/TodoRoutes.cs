@@ -38,5 +38,7 @@ public static class TodoRoutes
         });
 
         todosApi.MapPut("/bulkUpdate", async (TodoHandler handler, [FromBody] IEnumerable<TodoBulkUpdateRequest> request, CancellationToken cancellationToken = default) => await handler.BulkUpdateAsync(request, cancellationToken));
+
+        todosApi.MapDelete("/bulkDelete", async (TodoHandler handler, [FromBody] IEnumerable<int> request, CancellationToken cancellationToken = default) => await handler.BulkDeleteAsync(request, cancellationToken));
     }
 }

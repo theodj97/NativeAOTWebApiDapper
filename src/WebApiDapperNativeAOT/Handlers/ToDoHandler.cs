@@ -262,4 +262,44 @@ public class TodoHandler(string connectionString)
             await connection.ExecuteAsync("DROP TABLE IF EXISTS #TempTodos");
         }
     }
+
+    [DapperAot]
+    public async Task<bool> BulkDeleteAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    {
+        if (!ids.Any())
+            return false;
+
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            var idsList = string.Join(",", ids);
+
+            var query = $@"
+            IF (SELECT COUNT(*) FROM dbo.Todos WHERE Id IN ({idsList})) <> @Count
+            BEGIN
+                THROW 50000, 'One or more Todo IDs do not exist.', 1;
+            END
+
+            DELETE FROM dbo.Todos WHERE Id IN ({idsList});
+            ";
+
+            var parameters = new { Count = ids.Count() };
+            await connection.ExecuteAsync(query, parameters, transaction);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch (SqlException ex) when (ex.Number == 50000)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw new NotFoundException("One or more Todo IDs do not exist.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
 }
