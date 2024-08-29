@@ -21,28 +21,46 @@ public class TodoHandler(string connectionString)
         var query = new StringBuilder("SELECT Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete FROM dbo.Todos");
 
         List<string> conditions = [];
+        List<SqlParameter> parameters = [];
 
         if (title?.Length > 0)
-            conditions.Add($"Title IN ({string.Join(",", title.Select(t => $"'{t.Replace("'", "''")}'"))})");
+        {
+            conditions.Add("Title IN (@title)");
+            parameters.Add(new SqlParameter("@title", string.Join(",", title)));
+        }
 
         if (description?.Length > 0)
-            conditions.Add($"Description IN ({string.Join(",", description.Select(d => $"'{d.Replace("'", "''")}'"))})");
+        {
+            conditions.Add("Description IN (@description)");
+            parameters.Add(new SqlParameter("@description", string.Join(",", description)));
+        }
 
         if (createdBy.HasValue)
+        {
             conditions.Add("CreatedBy = @createdBy");
+            parameters.Add(new SqlParameter("@createdBy", createdBy));
+        }
 
         if (assignedTo?.Length > 0)
-            conditions.Add($"AssignedTo = '{string.Join(",", assignedTo)}'");
+        {
+            conditions.Add("AssignedTo IN (@assignedTo)");
+            parameters.Add(new SqlParameter("@assignedTo", string.Join(",", assignedTo)));
+        }
 
         if (isComplete.HasValue)
+        {
             conditions.Add("IsComplete = @isComplete");
+            parameters.Add(new SqlParameter("@isComplete", isComplete));
+        }
 
         if (conditions.Count > 0)
             query.Append(" WHERE ").Append(string.Join(" AND ", conditions));
 
-        var parameters = new { createdBy, isComplete };
-        var response = await connection.QueryAsync<TodoEntity>(query.ToString(), parameters);
-        return TodoMapper.FromEntityToResponse(response);
+        using var command = new SqlCommand(query.ToString(), connection);
+        command.Parameters.AddRange([.. parameters]);
+
+        var results = await ExecuteReaderAsync(command, cancellationToken);
+        return TodoMapper.FromEntityToResponse(results);
     }
 
     [DapperAot]
@@ -50,8 +68,22 @@ public class TodoHandler(string connectionString)
     {
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
-        var response = await connection.QueryFirstAsync<TodoEntity>("select Id, Title, Description, CreatedBy, AssignedTo,TargetDate, IsComplete from dbo.Todos where Id=@todoId", new { todoId });
-        return TodoMapper.FromEntityToResponse(response);
+
+        var query = "SELECT Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete FROM dbo.Todos WHERE Id = @todoId";
+        var parameters = new Dictionary<string, object>
+        {
+            { "@todoId", todoId }
+        };
+
+        var command = new SqlCommand(query, connection);
+        foreach (var param in parameters)
+            command.Parameters.AddWithValue(param.Key, param.Value);
+
+        var results = await ExecuteReaderAsync(command, cancellationToken);
+        if (results.Count != 0)
+            return TodoMapper.FromEntityToResponse(results.First());
+
+        throw new NotFoundException($"Todo with Id {todoId} not found.");
     }
 
     [DapperAot]
@@ -152,23 +184,35 @@ public class TodoHandler(string connectionString)
         try
         {
             var query = new StringBuilder();
+            var parameters = new List<SqlParameter>();
+
             query.Append("IF EXISTS (SELECT 1 FROM dbo.Todos WHERE Title IN (");
-            foreach (var todo in request)
+            for (int i = 0; i < request.Count(); i++)
             {
-                query.Append($"'{todo.Title.Replace("'", "''")}',");
+                var todo = request.ElementAt(i);
+                query.Append($"@Title{i},");
+                parameters.Add(new SqlParameter($"@Title{i}", todo.Title));
             }
             query.Length--; // Eliminar la última coma
             query.Append(")) BEGIN THROW 50000, 'A Todo with the same title already exists.', 1; END ");
 
             query.Append("INSERT INTO dbo.Todos (Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete) VALUES ");
-            foreach (var todo in request)
+            for (int i = 0; i < request.Count(); i++)
             {
-                query.Append($"('{todo.Title.Replace("'", "''")}', {(todo.Description is not null ? $"'{todo.Description.Replace("'", "''")}'" : "NULL")}, {todo.CreatedBy}, {todo.AssignedTo}, '{todo.TargetDate:yyyy-MM-dd HH:mm:ss}', {(todo.IsComplete ? 1 : 0)}),");
+                var todo = request.ElementAt(i);
+                query.Append($"(@Title{i}, @Description{i}, @CreatedBy{i}, @AssignedTo{i}, @TargetDate{i}, @IsComplete{i}),");
+                parameters.Add(new SqlParameter($"@Description{i}", (object?)todo.Description ?? DBNull.Value));
+                parameters.Add(new SqlParameter($"@CreatedBy{i}", todo.CreatedBy));
+                parameters.Add(new SqlParameter($"@AssignedTo{i}", (object?)todo.AssignedTo ?? DBNull.Value));
+                parameters.Add(new SqlParameter($"@TargetDate{i}", todo.TargetDate));
+                parameters.Add(new SqlParameter($"@IsComplete{i}", todo.IsComplete));
             }
-
             query.Length--; // Eliminar la última coma
 
-            await connection.ExecuteAsync(query.ToString(), transaction: transaction);
+            using var command = new SqlCommand(query.ToString(), connection, transaction);
+            command.Parameters.AddRange([.. parameters]);
+
+            await command.ExecuteNonQueryAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return true;
         }
@@ -192,6 +236,8 @@ public class TodoHandler(string connectionString)
         try
         {
             var query = new StringBuilder();
+            var parameters = new List<SqlParameter>();
+
             query.Append(@"
             CREATE TABLE #TempTodos (
                 Id INT,
@@ -205,20 +251,22 @@ public class TodoHandler(string connectionString)
             INSERT INTO #TempTodos (Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete)
             VALUES ");
 
-            var values = new List<string>();
-            foreach (var todo in request)
+            for (int i = 0; i < request.Count(); i++)
             {
-                var descriptionValue = todo.Description != null ? $"'{todo.Description.Replace("'", "''")}'" : "NULL";
-                var assignedToValue = todo.AssignedTo != null ? $"'{todo.AssignedTo.Replace("'", "''")}'" : "NULL";
-                var targetDateValue = todo.TargetDate.HasValue ? $"'{todo.TargetDate.Value:yyyy-MM-dd HH:mm:ss}'" : "NULL";
-                var value = $"({todo.Id}, '{todo.Title.Replace("'", "''")}', {descriptionValue}, {todo.CreatedBy}, {assignedToValue}, {targetDateValue}, {(todo.IsComplete ? 1 : 0)})";
-                values.Add(value);
+                var todo = request.ElementAt(i);
+                query.Append($"(@Id{i}, @Title{i}, @Description{i}, @CreatedBy{i}, @AssignedTo{i}, @TargetDate{i}, @IsComplete{i}),");
+                parameters.Add(new SqlParameter($"@Id{i}", todo.Id));
+                parameters.Add(new SqlParameter($"@Title{i}", todo.Title));
+                parameters.Add(new SqlParameter($"@Description{i}", (object?)todo.Description ?? DBNull.Value));
+                parameters.Add(new SqlParameter($"@CreatedBy{i}", todo.CreatedBy));
+                parameters.Add(new SqlParameter($"@AssignedTo{i}", (object?)todo.AssignedTo ?? DBNull.Value));
+                parameters.Add(new SqlParameter($"@TargetDate{i}", (object?)todo.TargetDate ?? DBNull.Value));
+                parameters.Add(new SqlParameter($"@IsComplete{i}", todo.IsComplete));
             }
-
-            query.Append(string.Join(", ", values));
+            query.Length--; // Eliminar la última coma
 
             query.Append(@";
-            IF (SELECT COUNT(*) FROM dbo.Todos WHERE Id IN (SELECT Id FROM #TempTodos)) <> ").Append(request.Count()).Append(@"
+            IF (SELECT COUNT(*) FROM dbo.Todos WHERE Id IN (SELECT Id FROM #TempTodos)) <> @Count
             BEGIN
                 THROW 50000, 'One or more Todo IDs do not exist.', 1;
             END
@@ -238,7 +286,12 @@ public class TodoHandler(string connectionString)
             INNER JOIN #TempTodos temp ON t.Id = temp.Id;
             ");
 
-            await connection.ExecuteAsync(query.ToString(), transaction: transaction);
+            parameters.Add(new SqlParameter("@Count", request.Count()));
+
+            using var command = new SqlCommand(query.ToString(), connection, transaction);
+            command.Parameters.AddRange([.. parameters]);
+
+            await command.ExecuteNonQueryAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return true;
         }
@@ -275,19 +328,32 @@ public class TodoHandler(string connectionString)
 
         try
         {
-            var idsList = string.Join(",", ids);
+            var query = new StringBuilder();
+            var parameters = new List<SqlParameter>();
 
-            var query = $@"
-            IF (SELECT COUNT(*) FROM dbo.Todos WHERE Id IN ({idsList})) <> @Count
-            BEGIN
-                THROW 50000, 'One or more Todo IDs do not exist.', 1;
-            END
+            query.Append("IF (SELECT COUNT(*) FROM dbo.Todos WHERE Id IN (");
+            for (int i = 0; i < ids.Count(); i++)
+            {
+                query.Append($"@Id{i},");
+                parameters.Add(new SqlParameter($"@Id{i}", ids.ElementAt(i)));
+            }
+            query.Length--; // Eliminar la última coma
+            query.Append(")) <> @Count BEGIN THROW 50000, 'One or more Todo IDs do not exist.', 1; END ");
 
-            DELETE FROM dbo.Todos WHERE Id IN ({idsList});
-            ";
+            query.Append("DELETE FROM dbo.Todos WHERE Id IN (");
+            for (int i = 0; i < ids.Count(); i++)
+            {
+                query.Append($"@Id{i},");
+            }
+            query.Length--; // Eliminar la última coma
+            query.Append(");");
 
-            var parameters = new { Count = ids.Count() };
-            await connection.ExecuteAsync(query, parameters, transaction);
+            parameters.Add(new SqlParameter("@Count", ids.Count()));
+
+            using var command = new SqlCommand(query.ToString(), connection, transaction);
+            command.Parameters.AddRange([.. parameters]);
+
+            await command.ExecuteNonQueryAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return true;
         }
@@ -301,5 +367,19 @@ public class TodoHandler(string connectionString)
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
+    }
+
+    private static async Task<List<TodoEntity>> ExecuteReaderAsync(SqlCommand command, CancellationToken cancellationToken)
+    {
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var results = new List<TodoEntity>();
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var entity = TodoMapper.MapReaderToTodoEntity(reader);
+            results.Add(entity);
+        }
+
+        return results;
     }
 }
