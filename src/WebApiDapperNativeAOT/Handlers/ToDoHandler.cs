@@ -1,11 +1,12 @@
-﻿using Dapper;
+﻿using Azure.Core;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Text;
 using WebApiDapperNativeAOT.Handlers.Mappers;
 using WebApiDapperNativeAOT.Models.Entities;
-using WebApiDapperNativeAOT.Models.Exceptions;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
+using WebApiDapperNativeAOT.Models.Results;
 
 namespace WebApiDapperNativeAOT.Handlers;
 
@@ -14,7 +15,7 @@ public class TodoHandler(string connectionString)
     private readonly string connectionString = connectionString;
 
     [DapperAot]
-    public async Task<IEnumerable<TodoResponse>> SearchAsync(string[]? title = null, string[]? description = null, int? createdBy = null, int[]? assignedTo = null, bool? isComplete = null, CancellationToken cancellationToken = default)
+    public async Task<Result<IEnumerable<TodoResponse>>> SearchAsync(string[]? title = null, string[]? description = null, int? createdBy = null, int[]? assignedTo = null, bool? isComplete = null, CancellationToken cancellationToken = default)
     {
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -60,11 +61,16 @@ public class TodoHandler(string connectionString)
         command.Parameters.AddRange([.. parameters]);
 
         var results = await ExecuteReaderAsync(command, cancellationToken);
-        return TodoMapper.FromEntityToResponse(results);
+
+        if (results.Count == 0)
+            return Result<IEnumerable<TodoResponse>>.NoContent();
+
+        var response = TodoMapper.FromEntityToResponse(results);
+        return Result<IEnumerable<TodoResponse>>.Success(response);
     }
 
     [DapperAot]
-    public async Task<TodoResponse> GetByIdAsync(int todoId, CancellationToken cancellationToken = default)
+    public async Task<Result<TodoResponse>> GetByIdAsync(int todoId, CancellationToken cancellationToken = default)
     {
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -81,13 +87,13 @@ public class TodoHandler(string connectionString)
 
         var results = await ExecuteReaderAsync(command, cancellationToken);
         if (results.Count != 0)
-            return TodoMapper.FromEntityToResponse(results.First());
+            return Result<TodoResponse>.Success(TodoMapper.FromEntityToResponse(results.First()));
 
-        throw new NotFoundException($"Todo with Id {todoId} not found.");
+        return Result<TodoResponse>.Failure(new NotFoundError($"Todo with Id {todoId} not found."));
     }
 
     [DapperAot]
-    public async Task<TodoResponse> CreateAsync(TodoCreateRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<TodoResponse>> CreateAsync(TodoCreateRequest request, CancellationToken cancellationToken = default)
     {
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -110,17 +116,18 @@ public class TodoHandler(string connectionString)
 
             var newId = await connection.QuerySingleAsync<int>(query, request, transaction);
             await transaction.CommitAsync(cancellationToken);
-            return TodoMapper.FromCreateRequestToResponse(request, newId);
+            return Result<TodoResponse>.Created(TodoMapper.FromCreateRequestToResponse(request, newId));
         }
-        catch
+        catch (SqlException ex) when (ex.Number == 50000)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new ConflictException($"There is already a Todo with title '{request.Title}', title must be unique! ");
+
+            return Result<TodoResponse>.Failure(new ConflictError("A Todo with the same title already exists."));
         }
     }
 
     [DapperAot]
-    public async Task<bool> UpdateAsync(int id, TodoUpdateRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<bool>> UpdateAsync(int id, TodoUpdateRequest request, CancellationToken cancellationToken = default)
     {
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -153,12 +160,14 @@ public class TodoHandler(string connectionString)
 
             var result = await connection.ExecuteAsync(query, parameters, transaction);
             await transaction.CommitAsync(cancellationToken);
-            return result > 0;
+
+            return Result<bool>.Success(result > 0);
         }
-        catch
+        catch (SqlException ex) when (ex.Number == 50000)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new ConflictException($"There is already a Todo with title '{request.Title}', title must be unique! ");
+
+            return Result<bool>.Failure(new ConflictError("A Todo with the same title already exists."));
         }
     }
 
@@ -172,10 +181,11 @@ public class TodoHandler(string connectionString)
     }
 
     [DapperAot]
-    public async Task<bool> BulkInsertAsync(IEnumerable<TodoCreateRequest> request, CancellationToken cancellationToken = default)
+    public async Task<Result<bool>> BulkInsertAsync(IEnumerable<TodoCreateRequest> request, CancellationToken cancellationToken = default)
     {
+        // Cambiar este if en un futuro a un validador de requests externo, para que el handler no tenga que preocuparse por la validación
         if (!request.Any())
-            return false;
+            return Result<bool>.Failure(new DomainError("Anything to insert"));
 
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -214,20 +224,26 @@ public class TodoHandler(string connectionString)
 
             await command.ExecuteNonQueryAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            return true;
+            return Result<bool>.Success(true);
+        }
+        catch (SqlException ex) when (ex.Number == 50000)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return Result<bool>.Failure(new ConflictError("A Todo with the same title already exists."));
         }
         catch
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new ConflictException("An error occurred while inserting the todos.");
+            throw;
         }
     }
 
     [DapperAot]
-    public async Task<bool> BulkUpdateAsync(IEnumerable<TodoBulkUpdateRequest> request, CancellationToken cancellationToken = default)
+    public async Task<Result<bool>> BulkUpdateAsync(IEnumerable<TodoBulkUpdateRequest> request, CancellationToken cancellationToken = default)
     {
+        // Cambiar este if en un futuro a un validador de requests externo, para que el handler no tenga que preocuparse por la validación
         if (!request.Any())
-            return false;
+            return Result<bool>.Failure(new DomainError("Anything to insert"));
 
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -293,17 +309,17 @@ public class TodoHandler(string connectionString)
 
             await command.ExecuteNonQueryAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            return true;
+            return Result<bool>.Success(true);
         }
         catch (SqlException ex) when (ex.Number == 50000)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new NotFoundException("One or more Todo IDs do not exist.");
+            return Result<bool>.Failure(new NotFoundError("One or more Todo IDs do not exist."));
         }
         catch (SqlException ex) when (ex.Number == 50001)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new ConflictException("A Todo with the same title already exists.");
+            return Result<bool>.Failure(new ConflictError("A Todo with the same title already exists."));
         }
         catch
         {
@@ -317,10 +333,11 @@ public class TodoHandler(string connectionString)
     }
 
     [DapperAot]
-    public async Task<bool> BulkDeleteAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    public async Task<Result<bool>> BulkDeleteAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
     {
+        // Cambiar este if en un futuro a un validador de requests externo, para que el handler no tenga que preocuparse por la validación
         if (!ids.Any())
-            return false;
+            return Result<bool>.Failure(new DomainError("Anything to insert"));
 
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -355,12 +372,12 @@ public class TodoHandler(string connectionString)
 
             await command.ExecuteNonQueryAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            return true;
+            return Result<bool>.Success(true);
         }
         catch (SqlException ex) when (ex.Number == 50000)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new NotFoundException("One or more Todo IDs do not exist.");
+            return Result<bool>.Failure(new NotFoundError("One or more Todo IDs do not exist."));
         }
         catch
         {

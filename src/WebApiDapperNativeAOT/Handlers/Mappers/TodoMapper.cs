@@ -47,7 +47,7 @@ public static class TodoMapper
             Description: reader.IsDBNull(2) ? null : reader.GetString(2),
             CreatedBy: reader.GetInt32(3),
             AssignedTo: reader.IsDBNull(4) ? null : reader.GetString(4),
-            TargetDate: reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
+            TargetDate: reader.IsDBNull(5) ? null : reader.GetDateTime(5),
             IsComplete: reader.GetBoolean(6)
         );
     }
