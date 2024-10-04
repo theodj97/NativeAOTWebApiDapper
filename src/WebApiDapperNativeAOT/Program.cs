@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Serialization;
 using WebApiDapperNativeAOT.Handlers;
 using WebApiDapperNativeAOT.Handlers.ExceptionHandler;
+using WebApiDapperNativeAOT.Models.Configuration;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
 using WebApiDapperNativeAOT.Routes;
@@ -14,7 +15,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
 });
 
-string connectionString = "Server=localhost,1433;Database=Todo;User Id=sa;Password=Your_password123;TrustServerCertificate=True";
+MsSqlCnnString connectionString = new()
+{
+    ConnectionString = "Server=localhost,1433;Database=Todo;User Id=sa;Password=Your_password123;TrustServerCertificate=True"
+};
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Information; });

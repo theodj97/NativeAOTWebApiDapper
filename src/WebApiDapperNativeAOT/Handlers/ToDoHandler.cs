@@ -1,8 +1,8 @@
-﻿using Azure.Core;
-using Dapper;
+﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Text;
 using WebApiDapperNativeAOT.Handlers.Mappers;
+using WebApiDapperNativeAOT.Models.Configuration;
 using WebApiDapperNativeAOT.Models.Entities;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
@@ -10,9 +10,9 @@ using WebApiDapperNativeAOT.Models.Results;
 
 namespace WebApiDapperNativeAOT.Handlers;
 
-public class TodoHandler(string connectionString)
+public class TodoHandler(MsSqlCnnString connectionString)
 {
-    private readonly string connectionString = connectionString;
+    private readonly string connectionString = connectionString.ConnectionString!;
 
     [DapperAot]
     public async Task<Result<IEnumerable<TodoResponse>>> SearchAsync(string[]? title = null, string[]? description = null, int? createdBy = null, int[]? assignedTo = null, bool? isComplete = null, CancellationToken cancellationToken = default)
