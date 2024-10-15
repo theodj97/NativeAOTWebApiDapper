@@ -15,7 +15,7 @@ public class TestServerFixture : WebApplicationFactory<Program>, IAsyncLifetime
     public HttpClient HttpClient { get; private set; }
     public TestServerFixtureExtension Extension;
     private readonly MsSqlContainer sqlServerContainer;
-    private readonly MsSqlCnnString sqlServerCnnString = new();
+    private static readonly MsSqlCnnString sqlServerCnnString = new();
     public TestServerFixture()
     {
         sqlServerContainer = new MsSqlBuilder().WithImage("mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-20.04").Build();
@@ -63,5 +63,18 @@ public class TestServerFixture : WebApplicationFactory<Program>, IAsyncLifetime
     Task IAsyncLifetime.DisposeAsync()
     {
         return sqlServerContainer.DisposeAsync().AsTask();
+    }
+
+    internal static async Task ResetDatabase()
+    {
+        using SqlConnection conn = new(sqlServerCnnString.ConnectionString);
+        await conn.OpenAsync();
+
+        var resetSql = @"
+            DELETE FROM dbo.Todos;
+            DBCC CHECKIDENT ('Todos', RESEED, 0);";
+
+        using SqlCommand cmd = new(resetSql, conn);
+        await cmd.ExecuteNonQueryAsync();
     }
 }

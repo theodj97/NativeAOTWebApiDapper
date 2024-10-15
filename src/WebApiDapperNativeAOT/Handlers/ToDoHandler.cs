@@ -15,7 +15,7 @@ public class TodoHandler(MsSqlCnnString connectionString)
     private readonly string connectionString = connectionString.ConnectionString!;
 
     [DapperAot]
-    public async Task<Result<IEnumerable<TodoResponse>>> SearchAsync(string[]? title = null, string[]? description = null, int? createdBy = null, int[]? assignedTo = null, bool? isComplete = null, CancellationToken cancellationToken = default)
+    public async Task<Result<IEnumerable<TodoResponse>>> SearchAsync(TodoSearchRequest request, CancellationToken cancellationToken = default)
     {
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -24,34 +24,40 @@ public class TodoHandler(MsSqlCnnString connectionString)
         List<string> conditions = [];
         List<SqlParameter> parameters = [];
 
-        if (title?.Length > 0)
+        if (request.Title?.Length > 0)
         {
             conditions.Add("Title IN (@title)");
-            parameters.Add(new SqlParameter("@title", string.Join(",", title)));
+            parameters.Add(new SqlParameter("@title", string.Join(",", request.Title)));
         }
 
-        if (description?.Length > 0)
+        if (request.Description?.Length > 0)
         {
             conditions.Add("Description IN (@description)");
-            parameters.Add(new SqlParameter("@description", string.Join(",", description)));
+            parameters.Add(new SqlParameter("@description", string.Join(",", request.Description)));
         }
 
-        if (createdBy.HasValue)
+        if (request.CreatedBy.HasValue)
         {
             conditions.Add("CreatedBy = @createdBy");
-            parameters.Add(new SqlParameter("@createdBy", createdBy));
+            parameters.Add(new SqlParameter("@createdBy", request.CreatedBy));
         }
 
-        if (assignedTo?.Length > 0)
+        if (request.AssignedTo?.Length > 0)
         {
             conditions.Add("AssignedTo IN (@assignedTo)");
-            parameters.Add(new SqlParameter("@assignedTo", string.Join(",", assignedTo)));
+            parameters.Add(new SqlParameter("@assignedTo", string.Join(",", request.AssignedTo)));
         }
 
-        if (isComplete.HasValue)
+        if (request.TargetDate?.Length > 0)
+        {
+            conditions.Add("TargetDate IN (@targetDate)");
+            parameters.Add(new SqlParameter("@targetDate", string.Join(",", request.TargetDate)));
+        }
+
+        if (request.IsComplete.HasValue)
         {
             conditions.Add("IsComplete = @isComplete");
-            parameters.Add(new SqlParameter("@isComplete", isComplete));
+            parameters.Add(new SqlParameter("@isComplete", request.IsComplete));
         }
 
         if (conditions.Count > 0)
