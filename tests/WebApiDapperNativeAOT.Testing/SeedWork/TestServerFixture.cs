@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Smo;
 using Testcontainers.MsSql;
-using WebApiDapperNativeAOT.Models.Configuration;
 
 namespace WebApiDapperNativeAOT.Testing.SeedWork;
 
@@ -15,7 +14,7 @@ public class TestServerFixture : WebApplicationFactory<Program>, IAsyncLifetime
     public HttpClient HttpClient { get; private set; }
     public TestServerFixtureExtension Extension;
     private readonly MsSqlContainer sqlServerContainer;
-    private static readonly MsSqlCnnString sqlServerCnnString = new();
+    private static string sqlServerCnnString = string.Empty;
     public TestServerFixture()
     {
         sqlServerContainer = new MsSqlBuilder().WithImage("mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-20.04").Build();
@@ -42,11 +41,11 @@ public class TestServerFixture : WebApplicationFactory<Program>, IAsyncLifetime
         });
         builder.ConfigureTestServices(services =>
         {
-            var sqlCnnstringServiceDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(MsSqlCnnString));
+            var sqlCnnstringServiceDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(SqlConnection));
             if (sqlCnnstringServiceDescriptor is not null)
                 services.Remove(sqlCnnstringServiceDescriptor);
 
-            services.AddSingleton(sqlServerCnnString);
+            services.AddTransient(_ => new SqlConnection(sqlServerCnnString));
         });
     }
 
@@ -54,7 +53,7 @@ public class TestServerFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
         await sqlServerContainer.StartAsync();
 
-        sqlServerCnnString.ConnectionString =
+        sqlServerCnnString =
         sqlServerContainer.GetConnectionString().Replace("Database=master", "Database=Todo");
         HttpClient = Server.CreateClient();
         Extension = new TestServerFixtureExtension(sqlServerCnnString);
@@ -67,7 +66,7 @@ public class TestServerFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     internal static async Task ResetDatabase()
     {
-        using SqlConnection conn = new(sqlServerCnnString.ConnectionString);
+        using SqlConnection conn = new(sqlServerCnnString);
         await conn.OpenAsync();
 
         var resetSql = @"

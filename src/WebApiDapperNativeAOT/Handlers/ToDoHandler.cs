@@ -2,7 +2,6 @@
 using Microsoft.Data.SqlClient;
 using System.Text;
 using WebApiDapperNativeAOT.Handlers.Mappers;
-using WebApiDapperNativeAOT.Models.Configuration;
 using WebApiDapperNativeAOT.Models.Entities;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
@@ -10,14 +9,14 @@ using WebApiDapperNativeAOT.Models.Results;
 
 namespace WebApiDapperNativeAOT.Handlers;
 
-public class TodoHandler(MsSqlCnnString connectionString)
+public class TodoHandler(SqlConnection connection)
 {
-    private readonly string connectionString = connectionString.ConnectionString!;
+    private readonly SqlConnection di_connection = connection;
 
     [DapperAot]
     public async Task<Result<IEnumerable<TodoResponse>>> SearchAsync(TodoSearchRequest request, CancellationToken cancellationToken = default)
     {
-        using var connection = new SqlConnection(connectionString);
+        await using var connection = di_connection;
         await connection.OpenAsync(cancellationToken);
         var query = new StringBuilder("SELECT Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete FROM dbo.Todos");
 
@@ -78,7 +77,7 @@ public class TodoHandler(MsSqlCnnString connectionString)
     [DapperAot]
     public async Task<Result<TodoResponse>> GetByIdAsync(int todoId, CancellationToken cancellationToken = default)
     {
-        using var connection = new SqlConnection(connectionString);
+        await using var connection = di_connection;
         await connection.OpenAsync(cancellationToken);
 
         var query = "SELECT Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete FROM dbo.Todos WHERE Id = @todoId";
@@ -101,7 +100,7 @@ public class TodoHandler(MsSqlCnnString connectionString)
     [DapperAot]
     public async Task<Result<TodoResponse>> CreateAsync(TodoCreateRequest request, CancellationToken cancellationToken = default)
     {
-        using var connection = new SqlConnection(connectionString);
+        await using var connection = di_connection;
         await connection.OpenAsync(cancellationToken);
 
         using var transaction = connection.BeginTransaction();
@@ -135,7 +134,7 @@ public class TodoHandler(MsSqlCnnString connectionString)
     [DapperAot]
     public async Task<Result<bool>> UpdateAsync(int id, TodoUpdateRequest request, CancellationToken cancellationToken = default)
     {
-        using var connection = new SqlConnection(connectionString);
+        await using var connection = di_connection;
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 
@@ -180,7 +179,7 @@ public class TodoHandler(MsSqlCnnString connectionString)
     [DapperAot]
     public async Task DeleteAsync(int todoId, CancellationToken cancellationToken = default)
     {
-        using var connection = new SqlConnection(connectionString);
+        await using var connection = di_connection;
         await connection.OpenAsync(cancellationToken);
         var query = "DELETE FROM dbo.Todos WHERE Id = @todoId";
         await connection.ExecuteAsync(query, new { todoId });
@@ -193,7 +192,7 @@ public class TodoHandler(MsSqlCnnString connectionString)
         if (!request.Any())
             return Result<bool>.Failure(new DomainError("Anything to insert"));
 
-        using var connection = new SqlConnection(connectionString);
+        await using var connection = di_connection;
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 
@@ -251,7 +250,7 @@ public class TodoHandler(MsSqlCnnString connectionString)
         if (!request.Any())
             return Result<bool>.Failure(new DomainError("Anything to insert"));
 
-        using var connection = new SqlConnection(connectionString);
+        await using var connection = di_connection;
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 
@@ -345,7 +344,7 @@ public class TodoHandler(MsSqlCnnString connectionString)
         if (!ids.Any())
             return Result<bool>.Failure(new DomainError("Anything to insert"));
 
-        using var connection = new SqlConnection(connectionString);
+        await using var connection = di_connection;
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 

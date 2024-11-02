@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using System.Text.Json.Serialization;
 using WebApiDapperNativeAOT.Handlers;
 using WebApiDapperNativeAOT.Handlers.ExceptionHandler;
-using WebApiDapperNativeAOT.Models.Configuration;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
 using WebApiDapperNativeAOT.Routes;
@@ -15,18 +15,23 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
 });
 
-MsSqlCnnString connectionString = new()
-{
-    ConnectionString = "Server=localhost,1433;Database=Todo;User Id=sa;Password=Your_password123;TrustServerCertificate=True"
-};
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Information; });
+builder.Configuration.SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+if (environment == "DEVELOPMENT")
+    builder.Configuration.AddUserSecrets<Program>();
+else if (environment == "INTEGRATION" || environment == "STAGING" || environment == "PRODUCTION")
+    builder.Configuration.AddJsonFile($"appsettings.{environment}.json", optional: false, reloadOnChange: true);
+
+//builder.Logging.ClearProviders();
+//builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Information; });
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-
-builder.Services.AddSingleton(connectionString);
 builder.Services.AddTransient<TodoHandler>();
+
+builder.Services.AddTransient(_ => new SqlConnection(builder.Configuration.GetConnectionString("TodoSQL") ?? throw new Exception("ConnectionString was not found")));
 
 var app = builder.Build();
 

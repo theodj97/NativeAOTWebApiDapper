@@ -1,11 +1,41 @@
 {
   "profiles": {
-    "http": {
+    "http_Development": {
       "commandName": "Project",
       "launchBrowser": true,
       "launchUrl": "todos",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "DEVELOPMENT"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5170"
+    },
+    "http_Integration": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "todos",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "INTEGRATION"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5170"
+    },
+    "http_Staging": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "todos",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "STAGING"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5170"
+    },
+    "http_Production": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "todos",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "PRODUCTION"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5170"

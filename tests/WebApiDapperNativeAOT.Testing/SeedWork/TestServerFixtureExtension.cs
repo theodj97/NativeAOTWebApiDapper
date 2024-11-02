@@ -1,13 +1,12 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
-using WebApiDapperNativeAOT.Models.Configuration;
 using WebApiDapperNativeAOT.Models.Entities;
 
 namespace WebApiDapperNativeAOT.Testing.SeedWork;
 
-public class TestServerFixtureExtension(MsSqlCnnString sqlConnectionString)
+public class TestServerFixtureExtension(string sqlConnectionString)
 {
-    private readonly string sqlConnectionString = sqlConnectionString.ConnectionString ?? throw new Exception($"sqlConnectionString was null on dependency injection in {nameof(TestServerFixtureExtension)}");
+    private readonly string sqlConnectionString = sqlConnectionString ?? throw new Exception($"sqlConnectionString was null on dependency injection in {nameof(TestServerFixtureExtension)}");
 
     public async Task<TodoEntity> AddDefaultTodo(string title = "title", string description = "description test", int createdBy = 0, string? assignedTo = null, DateTime? targetDate = null, bool isCompleted = false)
     {
