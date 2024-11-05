@@ -11,10 +11,11 @@ namespace WebApiDapperNativeAOT.Testing.SeedWork;
 
 public class TestServerFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    public HttpClient HttpClient { get; private set; }
-    public TestServerFixtureExtension Extension;
+    public HttpClient HttpClient { get; private set; } = null!;
+    public TestServerFixtureExtension Extension = null!;
     private readonly MsSqlContainer sqlServerContainer;
     private static string sqlServerCnnString = string.Empty;
+
     public TestServerFixture()
     {
         sqlServerContainer = new MsSqlBuilder().WithImage("mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-20.04").Build();

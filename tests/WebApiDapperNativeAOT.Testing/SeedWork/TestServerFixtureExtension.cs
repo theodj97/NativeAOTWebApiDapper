@@ -10,7 +10,7 @@ public class TestServerFixtureExtension(string sqlConnectionString)
 
     public async Task<TodoEntity> AddDefaultTodo(string title = "title", string description = "description test", int createdBy = 0, string? assignedTo = null, DateTime? targetDate = null, bool isCompleted = false)
     {
-        TodoEntity todo = new(0, title, description, createdBy, assignedTo, targetDate, isCompleted);
+        TodoEntity todo = new(default, title, description, createdBy, assignedTo, targetDate, isCompleted);
 
         using var connection = new SqlConnection(sqlConnectionString);
         await connection.OpenAsync();

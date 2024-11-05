@@ -1,38 +1,40 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Text;
-using WebApiDapperNativeAOT.Handlers.Mappers;
+using WebApiDapperNativeAOT.Handlers.Todo.Mappers;
 using WebApiDapperNativeAOT.Models.Entities;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
 using WebApiDapperNativeAOT.Models.Results;
 
-namespace WebApiDapperNativeAOT.Handlers;
+namespace WebApiDapperNativeAOT.Handlers.Todo;
 
 public class TodoHandler(SqlConnection connection)
 {
-    private readonly SqlConnection di_connection = connection;
+    private readonly SqlConnection _connection = connection;
 
     [DapperAot]
     public async Task<Result<IEnumerable<TodoResponse>>> SearchAsync(TodoSearchRequest request, CancellationToken cancellationToken = default)
     {
-        await using var connection = di_connection;
+        await using var connection = _connection;
         await connection.OpenAsync(cancellationToken);
         var query = new StringBuilder("SELECT Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete FROM dbo.Todos");
 
         List<string> conditions = [];
         List<SqlParameter> parameters = [];
 
-        if (request.Title?.Length > 0)
+        if (request.Title != null && request.Title.Length > 0)
         {
-            conditions.Add("Title IN (@title)");
-            parameters.Add(new SqlParameter("@title", string.Join(",", request.Title)));
+            var titleParams = request.Title.Select((title, index) => new SqlParameter($"@title{index}", title)).ToArray();
+            conditions.Add($"Title IN ({string.Join(", ", titleParams.Select(p => p.ParameterName))})");
+            parameters.AddRange(titleParams);
         }
 
-        if (request.Description?.Length > 0)
+        if (request.Description != null && request.Description.Length > 0)
         {
-            conditions.Add("Description IN (@description)");
-            parameters.Add(new SqlParameter("@description", string.Join(",", request.Description)));
+            var descriptionParams = request.Description.Select((desc, index) => new SqlParameter($"@description{index}", desc)).ToArray();
+            conditions.Add($"Description IN ({string.Join(", ", descriptionParams.Select(p => p.ParameterName))})");
+            parameters.AddRange(descriptionParams);
         }
 
         if (request.CreatedBy.HasValue)
@@ -41,16 +43,18 @@ public class TodoHandler(SqlConnection connection)
             parameters.Add(new SqlParameter("@createdBy", request.CreatedBy));
         }
 
-        if (request.AssignedTo?.Length > 0)
+        if (request.AssignedTo != null && request.AssignedTo.Length > 0)
         {
-            conditions.Add("AssignedTo IN (@assignedTo)");
-            parameters.Add(new SqlParameter("@assignedTo", string.Join(",", request.AssignedTo)));
+            var assignedToParams = request.AssignedTo.Select((assigned, index) => new SqlParameter($"@assignedTo{index}", assigned)).ToArray();
+            conditions.Add($"AssignedTo IN ({string.Join(", ", assignedToParams.Select(p => p.ParameterName))})");
+            parameters.AddRange(assignedToParams);
         }
 
-        if (request.TargetDate?.Length > 0)
+        if (request.TargetDate != null && request.TargetDate.Length > 0)
         {
-            conditions.Add("TargetDate IN (@targetDate)");
-            parameters.Add(new SqlParameter("@targetDate", string.Join(",", request.TargetDate)));
+            var targetDateParams = request.TargetDate.Select((date, index) => new SqlParameter($"@targetDate{index}", date)).ToArray();
+            conditions.Add($"TargetDate IN ({string.Join(", ", targetDateParams.Select(p => p.ParameterName))})");
+            parameters.AddRange(targetDateParams);
         }
 
         if (request.IsComplete.HasValue)
@@ -70,14 +74,15 @@ public class TodoHandler(SqlConnection connection)
         if (results.Count == 0)
             return Result<IEnumerable<TodoResponse>>.NoContent();
 
-        var response = TodoMapper.FromEntityToResponse(results);
+        var response = TodoMapper.FromEntitiesToResponse(results);
         return Result<IEnumerable<TodoResponse>>.Success(response);
     }
+
 
     [DapperAot]
     public async Task<Result<TodoResponse>> GetByIdAsync(int todoId, CancellationToken cancellationToken = default)
     {
-        await using var connection = di_connection;
+        await using var connection = _connection;
         await connection.OpenAsync(cancellationToken);
 
         var query = "SELECT Id, Title, Description, CreatedBy, AssignedTo, TargetDate, IsComplete FROM dbo.Todos WHERE Id = @todoId";
@@ -100,7 +105,7 @@ public class TodoHandler(SqlConnection connection)
     [DapperAot]
     public async Task<Result<TodoResponse>> CreateAsync(TodoCreateRequest request, CancellationToken cancellationToken = default)
     {
-        await using var connection = di_connection;
+        await using var connection = _connection;
         await connection.OpenAsync(cancellationToken);
 
         using var transaction = connection.BeginTransaction();
@@ -134,7 +139,7 @@ public class TodoHandler(SqlConnection connection)
     [DapperAot]
     public async Task<Result<bool>> UpdateAsync(int id, TodoUpdateRequest request, CancellationToken cancellationToken = default)
     {
-        await using var connection = di_connection;
+        await using var connection = _connection;
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 
@@ -179,7 +184,7 @@ public class TodoHandler(SqlConnection connection)
     [DapperAot]
     public async Task DeleteAsync(int todoId, CancellationToken cancellationToken = default)
     {
-        await using var connection = di_connection;
+        await using var connection = _connection;
         await connection.OpenAsync(cancellationToken);
         var query = "DELETE FROM dbo.Todos WHERE Id = @todoId";
         await connection.ExecuteAsync(query, new { todoId });
@@ -192,7 +197,7 @@ public class TodoHandler(SqlConnection connection)
         if (!request.Any())
             return Result<bool>.Failure(new DomainError("Anything to insert"));
 
-        await using var connection = di_connection;
+        await using var connection = _connection;
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 
@@ -250,7 +255,7 @@ public class TodoHandler(SqlConnection connection)
         if (!request.Any())
             return Result<bool>.Failure(new DomainError("Anything to insert"));
 
-        await using var connection = di_connection;
+        await using var connection = _connection;
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 
@@ -344,7 +349,7 @@ public class TodoHandler(SqlConnection connection)
         if (!ids.Any())
             return Result<bool>.Failure(new DomainError("Anything to insert"));
 
-        await using var connection = di_connection;
+        await using var connection = _connection;
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 
