@@ -3,7 +3,7 @@ using WebApiDapperNativeAOT.Models.Entities;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
 
-namespace WebApiDapperNativeAOT.Handlers.Mappers;
+namespace WebApiDapperNativeAOT.Handlers.Todo.Mappers;
 
 public static class TodoMapper
 {
@@ -20,7 +20,7 @@ public static class TodoMapper
         );
     }
 
-    public static IEnumerable<TodoResponse> FromEntityToResponse(IEnumerable<TodoEntity> entities)
+    public static IEnumerable<TodoResponse> FromEntitiesToResponse(IEnumerable<TodoEntity> entities)
     {
         return entities.Select(FromEntityToResponse);
     }

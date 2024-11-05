@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FB11F307-E09
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CF9B918C-FC31-46F9-ACC7-FCE765314A79}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiDapperNativeAOT.Testing", "tests\WebApiDapperNativeAOT.Testing\WebApiDapperNativeAOT.Testing.csproj", "{BC747D15-9F3A-4DF3-BFE0-7AC4661E1F75}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,12 +21,17 @@ Global
 		{BA43809F-4151-4098-8553-1B7907950706}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BA43809F-4151-4098-8553-1B7907950706}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BA43809F-4151-4098-8553-1B7907950706}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC747D15-9F3A-4DF3-BFE0-7AC4661E1F75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC747D15-9F3A-4DF3-BFE0-7AC4661E1F75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC747D15-9F3A-4DF3-BFE0-7AC4661E1F75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC747D15-9F3A-4DF3-BFE0-7AC4661E1F75}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BA43809F-4151-4098-8553-1B7907950706} = {FB11F307-E098-4503-BDD0-8C06645142D4}
+		{BC747D15-9F3A-4DF3-BFE0-7AC4661E1F75} = {CF9B918C-FC31-46F9-ACC7-FCE765314A79}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5B3DDD51-8636-4D47-B670-8AD4CB0739C3}

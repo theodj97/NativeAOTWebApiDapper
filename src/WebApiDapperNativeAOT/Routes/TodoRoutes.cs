@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using WebApiDapperNativeAOT.Handlers;
+using WebApiDapperNativeAOT.Handlers.Todo;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 
 namespace WebApiDapperNativeAOT.Routes;
@@ -9,9 +9,9 @@ public static class TodoRoutes
     public static void TodoRoute(WebApplication app)
     {
         var todosApi = app.MapGroup("/todos");
-        todosApi.MapGet("/", async (TodoHandler handler, [FromQuery] string[]? title, [FromQuery] string[]? description, [FromQuery] int? createdBy, [FromQuery] int[]? assignedTo, [FromQuery] bool? isComplete, CancellationToken cancellationToken = default) =>
+        todosApi.MapGet("/", async (TodoHandler handler, [FromQuery] string[]? title, [FromQuery] string[]? description, [FromQuery] int? createdBy, [FromQuery] int[]? assignedTo, [FromQuery] DateTime[]? targetDate, [FromQuery] bool? isComplete, CancellationToken cancellationToken = default) =>
         {
-            var result = await handler.SearchAsync(title, description, createdBy, assignedTo, isComplete, cancellationToken);
+            var result = await handler.SearchAsync(new TodoSearchRequest(title, description, createdBy, assignedTo, targetDate, isComplete), cancellationToken);
             return result.ToResult();
         });
 
