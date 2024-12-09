@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using WebApiDapperNativeAOT.Models.Results;
 
 namespace WebApiDapperNativeAOT.Handlers.ExceptionHandler;
 
@@ -13,9 +14,9 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         if (exception is null)
             return false;
 
-        ProblemDetails problemDetails = new()
+        ResultModel resultModel = new()
         {
-            Status = StatusCodes.Status500InternalServerError,
+            StatusCode = StatusCodes.Status500InternalServerError,
             Title = "Server Error",
             Type = "Server Error",
             Detail = "An error occurred while processing your request."
@@ -24,8 +25,8 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         logger.LogError("Error: {exception}", exception);
         Debug.WriteLine($"Error: {exception}");
 
-        httpContext.Response.StatusCode = problemDetails.Status!.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails!, cancellationToken); // Esta advertencia no es importante ya que se ha añadido la clase ProblemDetails en AppJsonSerializerContext
+        httpContext.Response.StatusCode = resultModel.StatusCode;
+        await httpContext.Response.WriteAsJsonAsync(resultModel, cancellationToken); // Esta advertencia no es importante ya que se ha añadido la clase ProblemDetails en AppJsonSerializerContext
 
         return true;
     }

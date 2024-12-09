@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Text.Json.Serialization;
 using WebApiDapperNativeAOT.Handlers.ExceptionHandler;
@@ -7,6 +6,7 @@ using WebApiDapperNativeAOT.Handlers.Todo;
 using WebApiDapperNativeAOT.Models.Configuration;
 using WebApiDapperNativeAOT.Models.Requests.Todo;
 using WebApiDapperNativeAOT.Models.Responses;
+using WebApiDapperNativeAOT.Models.Results;
 using WebApiDapperNativeAOT.Routes;
 
 var builder = WebApplication.CreateSlimBuilder(args);
@@ -33,7 +33,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 //Handlers
 builder.Services.AddTransient<TodoHandler>();
 
-builder.Services.AddTransient(_ => new SqlConnection(builder.Configuration.GetConnectionString(AppConfiguration.CONNECTION_STRING_NAME) ?? throw new Exception("ConnectionString was not found")));
+builder.Services.AddTransient(_ => new SqlConnection(builder.Configuration.GetConnectionString(AppConfiguration.CONNECTION_STRING_NAME) ?? throw new Exception("ConnectionString was not found in AppSettings file.")));
 
 var app = builder.Build();
 
@@ -57,7 +57,7 @@ app.MapRoutes();
 app.Run();
 public partial class Program { }
 
-[JsonSerializable(typeof(ProblemDetails))]
+[JsonSerializable(typeof(ResultModel))]
 [JsonSerializable(typeof(TodoCreateRequest))]
 [JsonSerializable(typeof(IEnumerable<TodoCreateRequest>))]
 [JsonSerializable(typeof(TodoUpdateRequest))]

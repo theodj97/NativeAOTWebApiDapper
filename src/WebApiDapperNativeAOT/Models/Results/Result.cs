@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
-namespace WebApiDapperNativeAOT.Models.Results;
+﻿namespace WebApiDapperNativeAOT.Models.Results;
 
 public class Result<T>
 {
@@ -18,7 +16,9 @@ public class Result<T>
         if (!isSuccess && error is null)
             throw new InvalidOperationException();
 
-        if (isNoContent && isCreated)
+        // Posibles códigos de respuesta que también son correctos
+        var countPossibleResponses = new[] { isNoContent, isCreated }.Count(x => x);
+        if (countPossibleResponses > 1)
             throw new InvalidOperationException();
 
         IsSuccess = isSuccess;
@@ -50,10 +50,10 @@ public class Result<T>
 
         return Error switch
         {
-            BadRequestError => Microsoft.AspNetCore.Http.Results.BadRequest(new ProblemDetails() { Status = StatusCodes.Status400BadRequest, Title = Error.Title ?? "Bad Request", Type = "Bad Request", Detail = Error.Description ?? string.Empty }),
-            DomainError => Microsoft.AspNetCore.Http.Results.BadRequest(new ProblemDetails() { Status = StatusCodes.Status400BadRequest, Title = Error.Title ?? "Bad Request", Type = "Bad Request", Detail = Error.Description ?? string.Empty }),
-            NotFoundError => Microsoft.AspNetCore.Http.Results.NotFound(new ProblemDetails() { Status = StatusCodes.Status404NotFound, Title = Error.Title ?? "Not Found", Type = "Not Found", Detail = Error.Description ?? string.Empty }),
-            ConflictError => Microsoft.AspNetCore.Http.Results.Conflict(new ProblemDetails() { Status = StatusCodes.Status409Conflict, Title = Error.Title ?? "Conflict", Type = "Conflict", Detail = Error.Description ?? string.Empty }),
+            BadRequestError => Microsoft.AspNetCore.Http.Results.BadRequest(new ResultModel() { StatusCode = StatusCodes.Status400BadRequest, Title = Error.Title ?? "Bad Request", Type = "Bad Request", Detail = Error.Description ?? string.Empty }),
+            DomainError => Microsoft.AspNetCore.Http.Results.BadRequest(new ResultModel() { StatusCode = StatusCodes.Status400BadRequest, Title = Error.Title ?? "Bad Request", Type = "Bad Request", Detail = Error.Description ?? string.Empty }),
+            NotFoundError => Microsoft.AspNetCore.Http.Results.NotFound(new ResultModel() { StatusCode = StatusCodes.Status404NotFound, Title = Error.Title ?? "Not Found", Type = "Not Found", Detail = Error.Description ?? string.Empty }),
+            ConflictError => Microsoft.AspNetCore.Http.Results.Conflict(new ResultModel() { StatusCode = StatusCodes.Status409Conflict, Title = Error.Title ?? "Conflict", Type = "Conflict", Detail = Error.Description ?? string.Empty }),
             UnauthorizedError => Microsoft.AspNetCore.Http.Results.Unauthorized(),
             ForbiddenError => Microsoft.AspNetCore.Http.Results.Forbid(),
             _ => throw new Exception("Unknown error type")
